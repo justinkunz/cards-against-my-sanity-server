@@ -1,4 +1,5 @@
 const Firebase = require("./Firebase");
+const Player = require("./Player");
 const { generateNewGameBody } = require("../utils");
 
 class Game extends Firebase {
@@ -19,10 +20,11 @@ class Game extends Firebase {
     return Array.apply(null, Array(7)).map(() => this.drawWhiteCard());
   }
 
-  addPlayer(playerId, name) {
+  addPlayer(playerId, name, isVIP) {
     if (!this.players) this.players = {};
     this.players[playerId] = {
       name,
+      isVIP,
       score: 0,
       isCardzar: false,
       submittedCard: false,
@@ -52,10 +54,14 @@ class Game extends Firebase {
     return await Promise.all(
       playerIds.map(async (pid) => {
         const snapshot = await this._db.ref(`players/${pid}`).once("value");
-        return {
-          ...snapshot.val(),
-          playerId: pid,
-        };
+        return new Player(
+          {
+            ...snapshot.val(),
+            playerId: pid,
+          },
+          this._db,
+          `players/${pid}`
+        );
       })
     );
   }
@@ -80,7 +86,10 @@ class Game extends Firebase {
 
     const roundWinner = this.players[winner.playerId];
     roundWinner.score++;
-    this.round.winner = this.players[winner.playerId];
+    this.round.winner = {
+      ...this.players[winner.playerId],
+      id: winner.playerId,
+    };
     this.round.winningCard = winner.submittedCard;
     this.round.isComplete = true;
 

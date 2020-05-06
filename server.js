@@ -14,7 +14,7 @@ app.use([
     verbose: false,
   }),
   express.urlencoded({ extended: true }),
-  morgan(":method :url :status :res[content-length] - :response-time ms"),
+  morgan("\n:method :url :status :res[content-length] - :response-time ms"),
   express.json(),
   routes,
   serveStatic(path.join(__dirname, "..", "client", "dist")),

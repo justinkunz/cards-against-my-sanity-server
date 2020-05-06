@@ -1,5 +1,8 @@
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = process.env;
+const adjectives = require("../data/ids/adjectives.json");
+const nouns = require("../data/ids/nouns.json");
+const scheduler = require("node-schedule");
+const { JWT_SECRET, ENV_PREFIX } = process.env;
 
 const generateNewGameBody = (packs, winningScore, refresh = false) => {
   if (!packs) packs = [];
@@ -50,4 +53,33 @@ const token = {
   sign: (data) => jwt.sign(data, JWT_SECRET),
   verify: (token) => jwt.verify(token, JWT_SECRET),
 };
-module.exports = { generateNewGameBody, shuffle, token };
+
+const generateGameCode = () => {
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  return `${ENV_PREFIX || ""}${adj}-${noun}`.toLowerCase();
+};
+
+const scheduleDelete = (gameId) => {
+  const db = require("../firebase");
+  console.log("CREATING");
+  const { scheduledJobs } = scheduler;
+  if (scheduledJobs[gameId]) scheduledJobs[gameId].cancel();
+
+  const offsetMinuts = 30;
+  const now = new Date();
+  const deleteAt = new Date(now.getTime() + offsetMinuts * 60000);
+
+  scheduler.scheduleJob(gameId, deleteAt, () => {
+    console.log("DELETING");
+    db.Games.delete(gameId);
+  });
+};
+
+module.exports = {
+  generateNewGameBody,
+  shuffle,
+  token,
+  generateGameCode,
+  scheduleDelete,
+};
