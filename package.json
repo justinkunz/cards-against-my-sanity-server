@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "wipe-fb": "node scripts/deleteAll.js"
+    "wipe-fb": "node scripts/deleteAll.js",
+    "cardUpdate": "node scripts/combineCards.js",
+    "addDeck": "node scripts/addNewDeck.js $1 $2 $3"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "mongoose": "^5.9.9",
     "morgan": "^1.10.0",
     "node-schedule": "^1.3.2",
+    "request-ip": "^2.1.3",
     "serve-static": "^1.14.1",
     "socket.io": "^2.3.0"
   }

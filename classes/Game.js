@@ -1,6 +1,6 @@
 const Firebase = require("./Firebase");
 const Player = require("./Player");
-const { generateNewGameBody } = require("../utils");
+const { generateNewGameBody, getCardById } = require("../utils");
 
 class Game extends Firebase {
   constructor(data, db, ref) {
@@ -13,11 +13,13 @@ class Game extends Firebase {
 
   drawBlackCard() {
     const blackCard = this.decks.black.pop();
-    this.blackCard = blackCard;
+    this.blackCard = getCardById(blackCard);
   }
 
   generateHand() {
-    return Array.apply(null, Array(7)).map(() => this.drawWhiteCard());
+    return Array.apply(null, Array(7)).map(() =>
+      getCardById(this.drawWhiteCard())
+    );
   }
 
   addPlayer(playerId, name, isVIP) {

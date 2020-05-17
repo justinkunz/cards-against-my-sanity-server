@@ -14,10 +14,10 @@ app.use([
     verbose: false,
   }),
   express.urlencoded({ extended: true }),
-  morgan("\n:method :url :status :res[content-length] - :response-time ms"),
+  morgan(":method :url :status :res[content-length] - :response-time ms"),
   express.json(),
   routes,
-  serveStatic(path.join(__dirname, "..", "client", "dist")),
+  serveStatic(path.join(__dirname, "..", "dist")),
 ]);
 
 app.listen(PORT || 8081);

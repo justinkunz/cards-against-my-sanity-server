@@ -2,8 +2,15 @@ const jwt = require("jsonwebtoken");
 const adjectives = require("../data/ids/adjectives.json");
 const nouns = require("../data/ids/nouns.json");
 const scheduler = require("node-schedule");
+const allCards = require("../data/combinedCards.json");
 const { JWT_SECRET, ENV_PREFIX } = process.env;
 
+const getCardById = (id) => {
+  const color = id.startsWith("bl") ? "black" : "white";
+  const { text } = allCards[color].find((card) => card.id === id);
+
+  return { text, id };
+};
 const generateNewGameBody = (packs, winningScore, refresh = false) => {
   if (!packs) packs = [];
   if (!winningScore) winningScore = 10;
@@ -14,8 +21,8 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
   return {
     ...(refresh ? {} : { players: {} }),
     decks: {
-      black: blackCards,
-      white: whiteCards,
+      black: blackCards.map((c) => c.id),
+      white: whiteCards.map((c) => c.id),
     },
     expansion: packs,
     winner: {
@@ -62,7 +69,6 @@ const generateGameCode = () => {
 
 const scheduleDelete = (gameId) => {
   const db = require("../firebase");
-  console.log("CREATING");
   const { scheduledJobs } = scheduler;
   if (scheduledJobs[gameId]) scheduledJobs[gameId].cancel();
 
@@ -71,9 +77,16 @@ const scheduleDelete = (gameId) => {
   const deleteAt = new Date(now.getTime() + offsetMinuts * 60000);
 
   scheduler.scheduleJob(gameId, deleteAt, () => {
-    console.log("DELETING");
+    console.log("DELETING", gameId);
     db.Games.delete(gameId);
   });
+};
+
+const errorLog = (type, details) => {
+  console.log(`::ERROR:: ${type}`);
+  for (key in details) {
+    console.log(key, "->", details[key]);
+  }
 };
 
 module.exports = {
@@ -82,4 +95,6 @@ module.exports = {
   token,
   generateGameCode,
   scheduleDelete,
+  errorLog,
+  getCardById,
 };

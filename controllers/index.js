@@ -1,6 +1,8 @@
 const db = require("../firebase");
 const fs = require("fs");
-const { generateNewGameBody, shuffle, token } = require("../utils");
+const { generateNewGameBody, shuffle, token, getCardById } = require(
+  "../utils",
+);
 
 /**
  * Create New Game Controller
@@ -10,7 +12,7 @@ const createGame = async (req, res) => {
   const { packs, winningScore } = req.body.options;
 
   const gameId = await db.Games.create(
-    generateNewGameBody(packs, winningScore)
+    generateNewGameBody(packs, winningScore),
   );
 
   res.json({ gameId });
@@ -108,9 +110,8 @@ const manualStatusCheckFallback = async (req, res) => {
   const roundCards = (await game.getAllPlayersCards()).filter((c) => !!c);
 
   console.log(
-    `Manual Fallback check\n${roundCards.length} / ${
-      players.length - 1
-    } cards submitted `
+    `Manual Fallback check\n${roundCards.length} / ${players.length -
+      1} cards submitted `,
   );
   if (roundCards.length === players.length - 1) {
     console.log("MANUAL FALLBACK CATCH");
@@ -146,10 +147,10 @@ const resetRound = async (req, res) => {
     players.map(async (player) => {
       if (game.players[player.playerId].isCardzar) return;
       const cardId = player.submittedCard.id;
-      player.replaceCard(cardId, game.drawWhiteCard());
+      player.replaceCard(cardId, getCardById(game.drawWhiteCard()));
       player.submittedCard = false;
       await player.save();
-    })
+    }),
   );
 
   game.resetRound();
@@ -165,8 +166,12 @@ const resetRound = async (req, res) => {
  */
 const getDeck = (req, res) => {
   console.log("Getting deck");
+  const { showAll } = req.query;
+  console.log(showAll, typeof showAll);
   const files = JSON.parse(fs.readFileSync("./data/packs.json", "utf-8"));
-  const packs = files.map((f) => f.pack);
+  const packs = showAll === "true"
+    ? files.map((f) => f.pack)
+    : files.filter((f) => f.primary).map((f) => f.pack);
   res.json(packs);
 };
 
@@ -188,7 +193,7 @@ const playAgain = async (req, res) => {
       player.reset(newHand);
       await player.save();
       return;
-    })
+    }),
   );
 
   game.drawBlackCard();
@@ -212,6 +217,18 @@ const skipCard = (req, res) => {
   res.json({ status: "success" });
 };
 
+const refreshPlayerHand = async (req, res) => {
+  console.log("Refreshing hand");
+  const { game, playerId } = req;
+
+  const player = await db.Players.read(playerId);
+  console.log(game, player, playerId);
+  player.hand = game.generateHand();
+  game.players[playerId].score = game.players[playerId].score - 2;
+  await Promise.all([player.save(), game.save()]);
+
+  res.json({ status: "success" });
+};
 module.exports = {
   createGame,
   beginGame,
@@ -224,4 +241,5 @@ module.exports = {
   playAgain,
   skipCard,
   manualStatusCheckFallback,
+  refreshPlayerHand,
 };

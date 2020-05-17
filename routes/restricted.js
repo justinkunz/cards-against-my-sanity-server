@@ -9,12 +9,14 @@ const {
   playAgain,
   skipCard,
   manualStatusCheckFallback,
+  refreshPlayerHand,
 } = require("../controllers");
 
-const { isVIP, isCardzar } = require("./middleware");
+const { isVIP, isCardzar } = require("../middleware");
 
 router.route("/start").post(isVIP, beginGame);
 router.route("/player").get(getPlayerInfo);
+router.route("/player/hand").delete(refreshPlayerHand);
 router.route("/card").post(submitCard).put(skipCard);
 router
   .route("/round")

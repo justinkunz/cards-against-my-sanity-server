@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("./firebaseToken");
+const serviceAccount = require("../../firebaseToken");
 const { databaseURL } = process.env;
 const { Game, Player } = require("../classes");
 const { generateGameCode } = require("../utils");

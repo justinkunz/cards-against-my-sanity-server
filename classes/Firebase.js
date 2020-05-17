@@ -22,7 +22,8 @@ class Firebase {
   }
   async save() {
     const vals = this.dbVals();
-    await this._db.ref(this._ref).set(vals);
+    console.log("saving");
+    await this._db.ref(this._ref).set({ ...vals, lastUpdated: new Date() });
   }
 }
 

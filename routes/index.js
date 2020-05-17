@@ -6,7 +6,7 @@ const {
   validateGame,
   validatePlayer,
   rejectInProgressGame,
-} = require("./middleware");
+} = require("../middleware");
 const { addPlayer } = require("../controllers");
 
 // Unrestricted routes (For creating a new game or getting expansion packs)
@@ -24,7 +24,7 @@ router.use(
   validateToken,
   validateGame,
   validatePlayer,
-  restricted
+  restricted,
 );
 
 module.exports = router;
