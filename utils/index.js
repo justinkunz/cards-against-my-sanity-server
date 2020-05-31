@@ -1,16 +1,22 @@
 const jwt = require("jsonwebtoken");
 const adjectives = require("../data/ids/adjectives.json");
 const nouns = require("../data/ids/nouns.json");
-const scheduler = require("node-schedule");
 const allCards = require("../data/combinedCards.json");
 const { JWT_SECRET, ENV_PREFIX } = process.env;
 
+/**
+ * Finds Card data by card id
+ */
 const getCardById = (id) => {
   const color = id.startsWith("bl") ? "black" : "white";
   const { text } = allCards[color].find((card) => card.id === id);
 
   return { text, id };
 };
+
+/**
+ * Creates db body for game data
+ */
 const generateNewGameBody = (packs, winningScore, refresh = false) => {
   if (!packs) packs = [];
   if (!winningScore) winningScore = 10;
@@ -45,6 +51,9 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
   };
 };
 
+/**
+ * Shuffles passed in array
+ */
 const shuffle = (a) => {
   const arr = [...a];
   for (let i = 0; i < arr.length; i++) {
@@ -56,37 +65,21 @@ const shuffle = (a) => {
   return arr;
 };
 
+/**
+ * Controller for handling JWT tokens
+ */
 const token = {
   sign: (data) => jwt.sign(data, JWT_SECRET),
   verify: (token) => jwt.verify(token, JWT_SECRET),
 };
 
+/**
+ * Creates a random adjective / noun game code
+ */
 const generateGameCode = () => {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   return `${ENV_PREFIX || ""}${adj}-${noun}`.toLowerCase();
-};
-
-const scheduleDelete = (gameId) => {
-  const db = require("../firebase");
-  const { scheduledJobs } = scheduler;
-  if (scheduledJobs[gameId]) scheduledJobs[gameId].cancel();
-
-  const offsetMinuts = 30;
-  const now = new Date();
-  const deleteAt = new Date(now.getTime() + offsetMinuts * 60000);
-
-  scheduler.scheduleJob(gameId, deleteAt, () => {
-    console.log("DELETING", gameId);
-    db.Games.delete(gameId);
-  });
-};
-
-const errorLog = (type, details) => {
-  console.log(`::ERROR:: ${type}`);
-  for (key in details) {
-    console.log(key, "->", details[key]);
-  }
 };
 
 module.exports = {
@@ -94,7 +87,5 @@ module.exports = {
   shuffle,
   token,
   generateGameCode,
-  scheduleDelete,
-  errorLog,
   getCardById,
 };

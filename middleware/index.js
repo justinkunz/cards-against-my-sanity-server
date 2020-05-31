@@ -1,5 +1,7 @@
-const { token, scheduleDelete, errorLog } = require("../utils");
+const { token } = require("../utils");
+const scheduler = require("node-schedule");
 const db = require("../firebase");
+const logger = require("../utils/logger")("MIDDLEWARE");
 
 /**
  * Middleware - Validates a user's JWT token for restricted routes
@@ -10,12 +12,12 @@ const validateToken = (req, res, next) => {
     const jwtToken = req.header("Authorization");
     const { playerId } = token.verify(jwtToken);
 
-    console.log(`req from player ${playerId}`);
+    logger(`req from player ${playerId}`);
     req.playerId = playerId;
 
     next();
   } catch (err) {
-    errorLog("Bad Token", { err, token: req.header("Authorization") });
+    logger.error("Bad Token", { err, token: req.header("Authorization") });
     res.status(401).send("Unauthorized - Bad token");
   }
 };
@@ -27,14 +29,13 @@ const validateGame = async (req, res, next) => {
   // Validate Game Exists
   try {
     const { gameId } = req.params;
-    scheduleDelete(gameId);
     const game = await db.Games.read(gameId);
     if (!game) throw "Game not found";
 
     req.game = game;
     next();
   } catch (err) {
-    errorLog("Invalid Game", { err, params: req.params });
+    logger.error("Invalid Game", { err, params: req.params });
     res.status(404).send("Unauthorized - Game does not exist");
   }
 };
@@ -46,7 +47,7 @@ const validateGame = async (req, res, next) => {
  */
 const rejectInProgressGame = async (req, res, next) => {
   if (req.game.hasStarted) {
-    errorLog("Join attempt after start", { err, params: req.params });
+    logger.error("Join attempt after start", { err, params: req.params });
     res.status(401).send("Unauthorized - Game has already started");
   } else {
     next();
@@ -61,10 +62,10 @@ const validatePlayer = (req, res, next) => {
   const { game, playerId } = req;
   const player = game.players[playerId];
   if (!player) {
-    errorLog("Player not found in game", { game, playerId });
+    logger.error("Player not found in game", { game, playerId });
     res.status(401).send("Unauthorized - User is not a player in this game");
   } else {
-    console.log(`req by ${player.name}\n`);
+    logger(`req by ${player.name}`);
     req.player = player;
     next();
   }
@@ -79,7 +80,7 @@ const isCardzar = (req, res, next) => {
   if (game.players[playerId].isCardzar) {
     next();
   } else {
-    errorLog(
+    logger.error(
       "Cardzar action attempted by non cardzar",
       { game, playerId, player: game.players[playerId] },
     );
@@ -96,7 +97,7 @@ const isVIP = (req, res, next) => {
   if (game.players[playerId].isVIP) {
     next();
   } else {
-    errorLog(
+    logger.error(
       "VIP action attempted by non VIP",
       { game, playerId, player: game.players[playerId] },
     );
@@ -104,11 +105,42 @@ const isVIP = (req, res, next) => {
   }
 };
 
+/**
+ * Reschedules Game deletion
+ * Game deletes after 30 minutes of inactivity
+ */
+const scheduleDelete = (req, res, next) => {
+  try {
+    const { gameId } = req.params;
+    const { scheduledJobs } = scheduler;
+    if (scheduledJobs[gameId]) scheduledJobs[gameId].cancel();
+
+    // Schedule delete 30 minutes out
+    const offsetMinuts = 30;
+    const now = new Date();
+    const deleteAt = new Date(now.getTime() + offsetMinuts * 60000);
+
+    scheduler.scheduleJob(gameId, deleteAt, () => {
+      try {
+        logger("DELETING GAME", gameId);
+        db.Games.delete(gameId);
+      } catch (err) {
+        logger("Error deleting game", err);
+      }
+    });
+
+    next();
+  } catch (err) {
+    logger("Error scheduling deletion", err);
+    next();
+  }
+};
 module.exports = {
   validateToken,
   validateGame,
   validatePlayer,
   rejectInProgressGame,
   isCardzar,
+  scheduleDelete,
   isVIP,
 };

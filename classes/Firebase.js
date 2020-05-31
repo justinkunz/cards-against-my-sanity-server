@@ -1,3 +1,5 @@
+const logger = require("../utils/logger")("DB");
+
 class Firebase {
   constructor(data, db, ref) {
     Object.keys(data).forEach((key) => {
@@ -11,7 +13,7 @@ class Firebase {
     const vals = { ...this };
 
     delete vals._db;
-    delete vals.ref;
+    delete vals._ref;
 
     Object.keys(vals).forEach((key) => {
       if (typeof vals[key] === "function") {
@@ -21,8 +23,8 @@ class Firebase {
     return vals;
   }
   async save() {
+    logger(`Updating values for ${this._ref}`);
     const vals = this.dbVals();
-    console.log("saving");
     await this._db.ref(this._ref).set({ ...vals, lastUpdated: new Date() });
   }
 }

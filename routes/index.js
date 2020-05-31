@@ -6,6 +6,7 @@ const {
   validateGame,
   validatePlayer,
   rejectInProgressGame,
+  scheduleDelete,
 } = require("../middleware");
 const { addPlayer } = require("../controllers");
 
@@ -16,7 +17,7 @@ router.use("/api/game", unrestricted);
 // Adds player to specified game
 router
   .route("/api/game/:gameId/player")
-  .post(validateGame, rejectInProgressGame, addPlayer);
+  .post(validateGame, scheduleDelete, rejectInProgressGame, addPlayer);
 
 // Restricted routes
 router.use(
@@ -24,6 +25,7 @@ router.use(
   validateToken,
   validateGame,
   validatePlayer,
+  scheduleDelete,
   restricted,
 );
 

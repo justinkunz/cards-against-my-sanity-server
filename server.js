@@ -7,7 +7,6 @@ const path = require("path");
 const app = express();
 const routes = require("./routes");
 const { PORT } = process.env;
-const { token } = require("./utils");
 
 app.use([
   history({

@@ -1,5 +1,6 @@
 const db = require("../firebase");
 const fs = require("fs");
+const logger = require("../utils/logger")("CONTROLLERS");
 const { generateNewGameBody, shuffle, token, getCardById } = require(
   "../utils",
 );
@@ -8,7 +9,7 @@ const { generateNewGameBody, shuffle, token, getCardById } = require(
  * Create New Game Controller
  */
 const createGame = async (req, res) => {
-  console.log("Creating new game");
+  logger("Creating Game");
   const { packs, winningScore } = req.body.options;
 
   const gameId = await db.Games.create(
@@ -22,7 +23,7 @@ const createGame = async (req, res) => {
  * Begin Existing Game Controller
  */
 const beginGame = async (req, res) => {
-  console.log("Beginning game");
+  logger("Beginning game");
   const { game } = req;
 
   game.drawBlackCard();
@@ -40,7 +41,7 @@ const addPlayer = async (req, res) => {
   const { game } = req;
   const { name } = req.body;
   const { gameId } = req.params;
-  console.log(`Adding ${name} to ${gameId}`);
+  logger(`Adding ${name} to ${gameId}`);
 
   const hand = game.generateHand();
   const isVIP = !game.players || game.players.length === 0;
@@ -65,7 +66,7 @@ const addPlayer = async (req, res) => {
  */
 const getPlayerInfo = async (req, res) => {
   const { playerId, game } = req;
-  console.log(`Getting player info for ${playerId}`);
+  logger(`Getting player info for ${playerId}`);
   const player = await db.Players.read(playerId);
   game.updatePlayerTime(playerId);
   res.json({ ...player.dbVals(), playerId });
@@ -77,7 +78,7 @@ const getPlayerInfo = async (req, res) => {
 const submitCard = async (req, res) => {
   const { playerId, game } = req;
   const { cardId } = req.body;
-  console.log(`${playerId} submitted ${cardId}`);
+  logger(`${playerId} submitted ${cardId}`);
   const player = await db.Players.read(playerId);
 
   player.submittedCard = player.getCardById(cardId);
@@ -103,18 +104,13 @@ const submitCard = async (req, res) => {
  */
 const manualStatusCheckFallback = async (req, res) => {
   const { game } = req;
-
+  logger("Manual Fallback Check");
   if (game.round && game.round.ready) return res.json(game.dbVals());
 
   const players = Object.keys(game.players);
   const roundCards = (await game.getAllPlayersCards()).filter((c) => !!c);
 
-  console.log(
-    `Manual Fallback check\n${roundCards.length} / ${players.length -
-      1} cards submitted `,
-  );
   if (roundCards.length === players.length - 1) {
-    console.log("MANUAL FALLBACK CATCH");
     game.round.cards = shuffle(roundCards);
     game.round.ready = true;
     await game.save();
@@ -129,7 +125,7 @@ const selectWinner = async (req, res) => {
   const { playerId, game } = req;
   const { cardId } = req.body;
 
-  console.log(`${playerId} chose ${cardId} as round winner`);
+  logger(`${playerId} chose ${cardId} as round winner`);
   await game.recordRoundWinner(cardId);
   await game.save();
   res.json({ status: "success" });
@@ -140,7 +136,7 @@ const selectWinner = async (req, res) => {
  */
 const resetRound = async (req, res) => {
   const { game } = req;
-  console.log(`Resetting round`);
+  logger("Resetting round");
 
   const players = await game.getAllPlayers();
   Promise.all(
@@ -165,11 +161,10 @@ const resetRound = async (req, res) => {
  * Controller to get expansion packs
  */
 const getDeck = (req, res) => {
-  console.log("Getting deck");
-  const { showAll } = req.query;
-  console.log(showAll, typeof showAll);
+  logger("Getting deck");
+  const showAll = req.query.showAll === "true";
   const files = JSON.parse(fs.readFileSync("./data/packs.json", "utf-8"));
-  const packs = showAll === "true"
+  const packs = showAll
     ? files.map((f) => f.pack)
     : files.filter((f) => f.primary).map((f) => f.pack);
   res.json(packs);
@@ -179,7 +174,7 @@ const getDeck = (req, res) => {
  * Controller to reset game after end
  */
 const playAgain = async (req, res) => {
-  console.log("Restarting game");
+  logger("Restarting game");
   const { game } = req;
 
   game.resetGame();
@@ -198,7 +193,7 @@ const playAgain = async (req, res) => {
 
   game.drawBlackCard();
   game.setRandomCardzar();
-  game.save();
+  await game.save();
 
   res.json({ status: "success" });
 };
@@ -206,23 +201,22 @@ const playAgain = async (req, res) => {
 /**
  * Controller for skipping black card
  */
-const skipCard = (req, res) => {
-  console.log("Skipping card");
+const skipCard = async (req, res) => {
+  logger("Skipping card");
   const { game } = req;
 
   game.resetRound();
   game.drawBlackCard();
-  game.save();
+  await game.save();
 
   res.json({ status: "success" });
 };
 
 const refreshPlayerHand = async (req, res) => {
-  console.log("Refreshing hand");
+  logger("Refreshing hand");
   const { game, playerId } = req;
 
   const player = await db.Players.read(playerId);
-  console.log(game, player, playerId);
   player.hand = game.generateHand();
   game.players[playerId].score = game.players[playerId].score - 2;
   await Promise.all([player.save(), game.save()]);
