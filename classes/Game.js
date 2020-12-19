@@ -1,6 +1,6 @@
-const Firebase = require("./Firebase");
-const Player = require("./Player");
-const { generateNewGameBody, getCardById } = require("../utils");
+const Firebase = require('./Firebase');
+const Player = require('./Player');
+const { generateNewGameBody, getCardById } = require('../utils');
 
 class Game extends Firebase {
   constructor(data, db, ref) {
@@ -17,9 +17,7 @@ class Game extends Firebase {
   }
 
   generateHand() {
-    return Array.apply(null, Array(7)).map(() =>
-      getCardById(this.drawWhiteCard())
-    );
+    return Array.apply(null, Array(7)).map(() => getCardById(this.drawWhiteCard()));
   }
 
   addPlayer(playerId, name, isVIP) {
@@ -55,7 +53,7 @@ class Game extends Firebase {
     const playerIds = Object.keys(this.players);
     return await Promise.all(
       playerIds.map(async (pid) => {
-        const snapshot = await this._db.ref(`players/${pid}`).once("value");
+        const snapshot = await this._db.ref(`players/${pid}`).once('value');
         return new Player(
           {
             ...snapshot.val(),
@@ -71,23 +69,23 @@ class Game extends Firebase {
   async getAllPlayersCards() {
     const players = await this.getAllPlayers();
 
-    return players
-      .filter((p) => !this.players[p.playerId].isCardzar)
-      .map((p) => p.submittedCard);
+    return players.filter((p) => !this.players[p.playerId].isCardzar).map((p) => p.submittedCard);
   }
 
   updatePlayerTime(playerId) {
     this.players[playerId].lastUpdated = new Date().toISOString();
   }
 
+  calculatePlayerScore(playerId) {
+    return Object.keys(this.roundWinners || {}).filter((winner) => winner === playerId).length;
+  }
+
   async recordRoundWinner(cardId) {
     const players = await this.getAllPlayers();
-    const winner = players.find(
-      (p) => p.submittedCard && p.submittedCard.id === cardId
-    );
+    const winner = players.find((p) => p.submittedCard && p.submittedCard.id === cardId);
+    if (!this.roundWinners) this.roundWinners = {};
+    this.roundWinners[this.blackCard.id] = winner.playerId;
 
-    const roundWinner = this.players[winner.playerId];
-    roundWinner.score++;
     this.round.winner = {
       ...this.players[winner.playerId],
       id: winner.playerId,
@@ -95,8 +93,8 @@ class Game extends Firebase {
     this.round.winningCard = winner.submittedCard;
     this.round.isComplete = true;
 
-    if (parseInt(this.winner.winningScore) === roundWinner.score) {
-      this.winner.winner = roundWinner;
+    if (parseInt(this.winner.winningScore) === this.calculatePlayerScore(winner.playerId)) {
+      this.winner.winner = winner;
       this.gameOver = true;
     }
   }
@@ -118,9 +116,7 @@ class Game extends Firebase {
 
   setNextCardzar() {
     const playerIds = Object.keys(this.players);
-    const currentCardzarId = playerIds.find(
-      (pid) => this.players[pid].isCardzar
-    );
+    const currentCardzarId = playerIds.find((pid) => this.players[pid].isCardzar);
     const currentCardzarIndex = playerIds.indexOf(currentCardzarId);
 
     this.players[currentCardzarId].isCardzar = false;
@@ -142,11 +138,7 @@ class Game extends Firebase {
       this.players[pid].lastUpdated = new Date();
     });
 
-    const resetBody = generateNewGameBody(
-      this.expansion,
-      this.winner.winningScore,
-      true
-    );
+    const resetBody = generateNewGameBody(this.expansion, this.winner.winningScore, true);
     Object.keys(resetBody).forEach((key) => {
       this[key] = resetBody[key];
     });
