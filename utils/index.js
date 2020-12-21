@@ -1,14 +1,14 @@
-const jwt = require("jsonwebtoken");
-const adjectives = require("../data/ids/adjectives.json");
-const nouns = require("../data/ids/nouns.json");
-const allCards = require("../data/combinedCards.json");
+const jwt = require('jsonwebtoken');
+const adjectives = require('../data/ids/adjectives.json');
+const nouns = require('../data/ids/nouns.json');
+const allCards = require('../data/combinedCards.json');
 const { JWT_SECRET, ENV_PREFIX } = process.env;
 
 /**
  * Finds Card data by card id
  */
 const getCardById = (id) => {
-  const color = id.startsWith("bl") ? "black" : "white";
+  const color = id.startsWith('bl') ? 'black' : 'white';
   const { text } = allCards[color].find((card) => card.id === id);
 
   return { text, id };
@@ -21,7 +21,7 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
   if (!packs) packs = [];
   if (!winningScore) winningScore = 10;
 
-  const { CardDeck } = require("../classes");
+  const { CardDeck } = require('../classes');
   const cardDeck = new CardDeck(packs);
   const { blackCards, whiteCards } = cardDeck;
   return {
@@ -29,6 +29,10 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
     decks: {
       black: blackCards.map((c) => c.id),
       white: whiteCards.map((c) => c.id),
+    },
+    discard: {
+      black: [],
+      white: [],
     },
     expansion: packs,
     winner: {
@@ -38,7 +42,7 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
     gameOver: false,
     blackCard: {
       id: null,
-      text: "Waiting on other players. . .",
+      text: 'Waiting on other players. . .',
     },
     hasStarted: refresh,
     round: {
@@ -48,6 +52,7 @@ const generateNewGameBody = (packs, winningScore, refresh = false) => {
       winningCard: {},
       isComplete: false,
     },
+    roundWinners: {},
   };
 };
 
@@ -79,7 +84,7 @@ const token = {
 const generateGameCode = () => {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  return `${ENV_PREFIX || ""}${adj}-${noun}`.toLowerCase();
+  return `${ENV_PREFIX || ''}${adj}-${noun}`.toLowerCase();
 };
 
 module.exports = {

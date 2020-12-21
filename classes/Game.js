@@ -1,18 +1,43 @@
 const Firebase = require('./Firebase');
 const Player = require('./Player');
-const { generateNewGameBody, getCardById } = require('../utils');
+const { generateNewGameBody, getCardById, shuffle } = require('../utils');
 
 class Game extends Firebase {
   constructor(data, db, ref) {
     super(data, db, ref);
   }
 
-  drawWhiteCard() {
-    return this.decks.white.pop();
+  drawWhiteCard(discardedCard = null) {
+    return this._drawCard('white', discardedCard);
+  }
+
+  _drawCard(deck, currentCard = null) {
+    // Reshuffle if at end of deck
+    if (!this.decks[deck] || this.decks[deck].length === 0) {
+      const shuffledDeck = shuffle(this.discard[deck]);
+      this.decks[deck] = shuffledDeck;
+      this.discard[deck] = [];
+    }
+
+    // Add old card to discard pile if current card exists
+    if (currentCard) {
+      // Add to discard pile if exists
+      if (this.discard && this.discard[deck]) {
+        this.discard[deck].push(currentCard);
+      } else {
+        // Create discard pile for deck if it does not exist
+        this.discard = {
+          ...this.discard,
+          [deck]: [currentCard],
+        };
+      }
+    }
+
+    return this.decks[deck].pop();
   }
 
   drawBlackCard() {
-    const blackCard = this.decks.black.pop();
+    const blackCard = this._drawCard('black', this.blackCard.id);
     this.blackCard = getCardById(blackCard);
   }
 
@@ -25,7 +50,6 @@ class Game extends Firebase {
     this.players[playerId] = {
       name,
       isVIP,
-      score: 0,
       isCardzar: false,
       submittedCard: false,
       lastUpdated: new Date().toISOString(),
@@ -77,12 +101,13 @@ class Game extends Firebase {
   }
 
   calculatePlayerScore(playerId) {
-    return Object.keys(this.roundWinners || {}).filter((winner) => winner === playerId).length;
+    return Object.values(this.roundWinners || {}).filter((winner) => winner === playerId).length;
   }
 
   async recordRoundWinner(cardId) {
     const players = await this.getAllPlayers();
     const winner = players.find((p) => p.submittedCard && p.submittedCard.id === cardId);
+
     if (!this.roundWinners) this.roundWinners = {};
     this.roundWinners[this.blackCard.id] = winner.playerId;
 
@@ -94,7 +119,7 @@ class Game extends Firebase {
     this.round.isComplete = true;
 
     if (parseInt(this.winner.winningScore) === this.calculatePlayerScore(winner.playerId)) {
-      this.winner.winner = winner;
+      this.winner.winner = winner.dbVals();
       this.gameOver = true;
     }
   }
@@ -132,7 +157,6 @@ class Game extends Firebase {
     const playerIds = Object.keys(this.players);
 
     playerIds.forEach((pid) => {
-      this.players[pid].score = 0;
       this.players[pid].isCardzar = false;
       this.players[pid].submittedCard = false;
       this.players[pid].lastUpdated = new Date();

@@ -25,7 +25,6 @@ class Firebase {
   async save() {
     logger(`Updating values for ${this._ref}`);
     const vals = this.dbVals();
-    logger(vals);
     await this._db.ref(this._ref).set({ ...vals, lastUpdated: new Date() });
   }
 }

@@ -1,4 +1,4 @@
-const Firebase = require("./Firebase");
+const Firebase = require('./Firebase');
 
 class Player extends Firebase {
   constructor(data, db, ref) {
@@ -19,7 +19,6 @@ class Player extends Firebase {
 
   reset(newHand) {
     this.isCardzar = false;
-    this.score = 0;
     this.submittedCard = false;
     this.hand = newHand;
   }

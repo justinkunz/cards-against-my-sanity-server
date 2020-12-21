@@ -1,20 +1,16 @@
-const db = require("../firebase");
-const fs = require("fs");
-const logger = require("../utils/logger")("CONTROLLERS");
-const { generateNewGameBody, shuffle, token, getCardById } = require(
-  "../utils",
-);
+const db = require('../firebase');
+const fs = require('fs');
+const logger = require('../utils/logger')('CONTROLLERS');
+const { generateNewGameBody, shuffle, token, getCardById } = require('../utils');
 
 /**
  * Create New Game Controller
  */
 const createGame = async (req, res) => {
-  logger("Creating Game");
+  logger('Creating Game');
   const { packs, winningScore } = req.body.options;
 
-  const gameId = await db.Games.create(
-    generateNewGameBody(packs, winningScore),
-  );
+  const gameId = await db.Games.create(generateNewGameBody(packs, winningScore));
 
   res.json({ gameId });
 };
@@ -23,7 +19,7 @@ const createGame = async (req, res) => {
  * Begin Existing Game Controller
  */
 const beginGame = async (req, res) => {
-  logger("Beginning game");
+  logger('Beginning game');
   const { game } = req;
 
   game.drawBlackCard();
@@ -31,7 +27,7 @@ const beginGame = async (req, res) => {
   game.setRandomCardzar();
   await game.save();
 
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 
 /**
@@ -104,7 +100,7 @@ const submitCard = async (req, res) => {
  */
 const manualStatusCheckFallback = async (req, res) => {
   const { game } = req;
-  logger("Manual Fallback Check");
+  logger('Manual Fallback Check');
   if (game.round && game.round.ready) return res.json(game.dbVals());
 
   const players = Object.keys(game.players);
@@ -128,7 +124,7 @@ const selectWinner = async (req, res) => {
   logger(`${playerId} chose ${cardId} as round winner`);
   await game.recordRoundWinner(cardId);
   await game.save();
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 
 /**
@@ -136,17 +132,17 @@ const selectWinner = async (req, res) => {
  */
 const resetRound = async (req, res) => {
   const { game } = req;
-  logger("Resetting round");
+  logger('Resetting round');
 
   const players = await game.getAllPlayers();
   Promise.all(
     players.map(async (player) => {
       if (game.players[player.playerId].isCardzar) return;
       const cardId = player.submittedCard.id;
-      player.replaceCard(cardId, getCardById(game.drawWhiteCard()));
+      player.replaceCard(cardId, getCardById(game.drawWhiteCard(cardId)));
       player.submittedCard = false;
       await player.save();
-    }),
+    })
   );
 
   game.resetRound();
@@ -154,16 +150,16 @@ const resetRound = async (req, res) => {
   game.setNextCardzar();
 
   await game.save();
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 
 /**
  * Controller to get expansion packs
  */
 const getDeck = (req, res) => {
-  logger("Getting deck");
-  const showAll = req.query.showAll === "true";
-  const files = JSON.parse(fs.readFileSync("./data/packs.json", "utf-8"));
+  logger('Getting deck');
+  const showAll = req.query.showAll === 'true';
+  const files = JSON.parse(fs.readFileSync('./data/packs.json', 'utf-8'));
   const packs = showAll
     ? files.map((f) => f.pack)
     : files.filter((f) => f.primary).map((f) => f.pack);
@@ -174,7 +170,7 @@ const getDeck = (req, res) => {
  * Controller to reset game after end
  */
 const playAgain = async (req, res) => {
-  logger("Restarting game");
+  logger('Restarting game');
   const { game } = req;
 
   game.resetGame();
@@ -188,32 +184,32 @@ const playAgain = async (req, res) => {
       player.reset(newHand);
       await player.save();
       return;
-    }),
+    })
   );
 
   game.drawBlackCard();
   game.setRandomCardzar();
   await game.save();
 
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 
 /**
  * Controller for skipping black card
  */
 const skipCard = async (req, res) => {
-  logger("Skipping card");
+  logger('Skipping card');
   const { game } = req;
 
   game.resetRound();
   game.drawBlackCard();
   await game.save();
 
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 
 const refreshPlayerHand = async (req, res) => {
-  logger("Refreshing hand");
+  logger('Refreshing hand');
   const { game, playerId } = req;
 
   const player = await db.Players.read(playerId);
@@ -221,7 +217,7 @@ const refreshPlayerHand = async (req, res) => {
   game.players[playerId].score = game.players[playerId].score - 2;
   await Promise.all([player.save(), game.save()]);
 
-  res.json({ status: "success" });
+  res.json({ status: 'success' });
 };
 module.exports = {
   createGame,
