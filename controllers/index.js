@@ -101,7 +101,7 @@ const submitCard = async (req, res) => {
 const manualStatusCheckFallback = async (req, res) => {
   const { game } = req;
   logger('Manual Fallback Check');
-  if (game.round && game.round.ready) return res.json(game.dbVals());
+  if (game.round && game.round.ready) return res.json({ status: 'success' });
 
   const players = Object.keys(game.players);
   const roundCards = (await game.getAllPlayersCards()).filter((c) => !!c);
@@ -112,7 +112,7 @@ const manualStatusCheckFallback = async (req, res) => {
     await game.save();
   }
 
-  res.json(game.dbVals());
+  res.json({ status: 'success' });
 };
 /**
  *  Controller for selecting winner
